@@ -2,7 +2,10 @@ import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import Image from 'next/image'
+import dynamic from 'next/dynamic'
 import { createClient } from '@/lib/supabase/server'
+
+const MiniMap = dynamic(() => import('@/components/map/MiniMap'), { ssr: false })
 import { formatAddress, getCountryLabel } from '@/lib/utils'
 import {
   MapPin, Phone, Mail, Globe, Clock, CheckCircle,
@@ -239,17 +242,14 @@ export default async function ShopPage({ params }: Props) {
           )}
         </div>
 
-        {/* Static location map */}
+        {/* Location mini-map */}
         {typedShop.latitude && typedShop.longitude && (
           <div className="rounded-xl overflow-hidden border border-gray-100 shadow-sm">
             <div className="relative h-48 bg-gray-100">
-              <iframe
-                src={`https://www.openstreetmap.org/export/embed.html?bbox=${typedShop.longitude - 0.012},${typedShop.latitude - 0.007},${typedShop.longitude + 0.012},${typedShop.latitude + 0.007}&layer=mapnik&marker=${typedShop.latitude},${typedShop.longitude}`}
-                className="w-full h-full"
-                style={{ pointerEvents: 'none', border: 'none' }}
-                loading="lazy"
-                title={`Map showing location of ${typedShop.name}`}
-                aria-label={`Map showing location of ${typedShop.name} in ${typedShop.town}`}
+              <MiniMap
+                lat={typedShop.latitude}
+                lng={typedShop.longitude}
+                name={typedShop.name}
               />
             </div>
             <a
