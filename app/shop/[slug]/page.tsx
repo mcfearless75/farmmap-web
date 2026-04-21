@@ -2,10 +2,8 @@ import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import Image from 'next/image'
-import dynamic from 'next/dynamic'
 import { createClient } from '@/lib/supabase/server'
-
-const MiniMap = dynamic(() => import('@/components/map/MiniMap'), { ssr: false })
+import ShopMiniMap from '@/components/map/ShopMiniMap'
 import { formatAddress, getCountryLabel } from '@/lib/utils'
 import {
   MapPin, Phone, Mail, Globe, Clock, CheckCircle,
@@ -246,7 +244,7 @@ export default async function ShopPage({ params }: Props) {
         {typedShop.latitude && typedShop.longitude && (
           <div className="rounded-xl overflow-hidden border border-gray-100 shadow-sm">
             <div className="relative h-48 bg-gray-100">
-              <MiniMap
+              <ShopMiniMap
                 lat={typedShop.latitude}
                 lng={typedShop.longitude}
                 name={typedShop.name}
