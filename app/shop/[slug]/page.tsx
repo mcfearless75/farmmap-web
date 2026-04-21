@@ -239,6 +239,32 @@ export default async function ShopPage({ params }: Props) {
           )}
         </div>
 
+        {/* Static location map */}
+        {typedShop.latitude && typedShop.longitude && (
+          <div className="rounded-xl overflow-hidden border border-gray-100 shadow-sm">
+            <div className="relative h-48 bg-gray-100">
+              <iframe
+                src={`https://www.openstreetmap.org/export/embed.html?bbox=${typedShop.longitude - 0.012},${typedShop.latitude - 0.007},${typedShop.longitude + 0.012},${typedShop.latitude + 0.007}&layer=mapnik&marker=${typedShop.latitude},${typedShop.longitude}`}
+                className="w-full h-full"
+                style={{ pointerEvents: 'none', border: 'none' }}
+                loading="lazy"
+                title={`Map showing location of ${typedShop.name}`}
+                aria-label={`Map showing location of ${typedShop.name} in ${typedShop.town}`}
+              />
+            </div>
+            <a
+              href={`https://www.openstreetmap.org/?mlat=${typedShop.latitude}&mlon=${typedShop.longitude}#map=15/${typedShop.latitude}/${typedShop.longitude}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 px-3 py-2 text-xs bg-white hover:bg-gray-50 transition-colors cursor-pointer"
+              style={{ borderTop: '1px solid #f3f4f6', color: '#15803D' }}
+            >
+              <MapPin className="w-3.5 h-3.5 shrink-0" />
+              Open in OpenStreetMap
+            </a>
+          </div>
+        )}
+
         {/* Photos */}
         {photos && photos.length > 0 && (
           <div className="rounded-xl overflow-hidden">

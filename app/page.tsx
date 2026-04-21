@@ -103,17 +103,25 @@ export default async function HomePage() {
       {/* ── Hero ────────────────────────────────────────────────────────── */}
       <section
         className="relative px-4 py-20 sm:py-28 text-center overflow-hidden"
-        style={{ background: 'linear-gradient(160deg, var(--forest-dark) 0%, var(--forest-mid) 60%, #1a7a3c 100%)' }}
+        style={{ background: 'var(--forest-dark)' }}
       >
-        {/* Decorative organic blobs */}
-        <div
-          className="absolute -top-20 -left-20 w-96 h-96 rounded-full opacity-10"
-          style={{ background: 'var(--gold)', filter: 'blur(80px)' }}
+        {/* Background video */}
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover"
+          style={{ opacity: 0.35 }}
           aria-hidden="true"
-        />
+        >
+          <source src="/hero.mp4" type="video/mp4" />
+        </video>
+
+        {/* Dark gradient overlay */}
         <div
-          className="absolute -bottom-10 -right-10 w-80 h-80 rounded-full opacity-10"
-          style={{ background: '#22C55E', filter: 'blur(60px)' }}
+          className="absolute inset-0"
+          style={{ background: 'linear-gradient(160deg, rgba(20,83,45,0.7) 0%, rgba(22,101,52,0.5) 60%, rgba(26,122,60,0.6) 100%)' }}
           aria-hidden="true"
         />
 
