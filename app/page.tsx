@@ -112,7 +112,7 @@ export default async function HomePage() {
           loop
           playsInline
           className="absolute inset-0 w-full h-full object-cover"
-          style={{ opacity: 0.35 }}
+          style={{ opacity: 0.22 }}
           aria-hidden="true"
         >
           <source src="/hero.mp4" type="video/mp4" />
@@ -121,7 +121,7 @@ export default async function HomePage() {
         {/* Dark gradient overlay */}
         <div
           className="absolute inset-0"
-          style={{ background: 'linear-gradient(160deg, rgba(20,83,45,0.7) 0%, rgba(22,101,52,0.5) 60%, rgba(26,122,60,0.6) 100%)' }}
+          style={{ background: 'linear-gradient(160deg, rgba(5,46,22,0.88) 0%, rgba(20,83,45,0.82) 60%, rgba(15,70,35,0.88) 100%)' }}
           aria-hidden="true"
         />
 
