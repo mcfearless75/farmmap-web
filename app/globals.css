@@ -1,26 +1,203 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
 
+/* ── Organic Biophilic Design System — Farmmap ───────────────────────── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Core palette — earth green + harvest gold */
+  --forest:       #15803D;   /* primary action */
+  --forest-dark:  #14532D;   /* headings, hover */
+  --forest-deep:  #052e16;   /* darkest green */
+  --forest-mid:   #166534;   /* nav bg */
+  --sage:         #4ade80;   /* accent light */
+  --sage-pale:    #dcfce7;   /* tag backgrounds */
+  --gold:         #CA8A04;   /* CTA, highlights */
+  --gold-light:   #fef9c3;   /* gold tint bg */
+  --earth:        #8B4513;   /* warm brown accent */
+  --cream:        #F5F0E1;   /* page background */
+  --cream-warm:   #fefce8;   /* card hover */
+  --sand:         #D4C4A8;   /* borders */
+  --bark:         #6b4c2f;   /* muted text warm */
+
+  /* Semantic */
+  --background:   var(--cream);
+  --foreground:   var(--forest-dark);
+  --border:       var(--sand);
+
+  /* Effects */
+  --radius-sm:    12px;
+  --radius-md:    16px;
+  --radius-lg:    24px;
+  --shadow-soft:  0 4px 24px rgba(21, 128, 61, 0.08);
+  --shadow-card:  0 2px 12px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0,0,0,0.08);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background:   var(--background);
+  --color-foreground:   var(--foreground);
+  --color-forest:       var(--forest);
+  --color-forest-dark:  var(--forest-dark);
+  --color-forest-mid:   var(--forest-mid);
+  --color-sage:         var(--sage);
+  --color-sage-pale:    var(--sage-pale);
+  --color-gold:         var(--gold);
+  --color-gold-light:   var(--gold-light);
+  --color-earth:        var(--earth);
+  --color-cream:        var(--cream);
+  --color-sand:         var(--sand);
+  --color-bark:         var(--bark);
+  --font-heading: var(--font-poppins);
+  --font-sans:    var(--font-open-sans);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ── Base ────────────────────────────────────────────────────────────── */
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--cream);
+  color: var(--forest-dark);
+  font-family: var(--font-open-sans), 'Open Sans', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  /* Subtle grain texture */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='grain'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23grain)' opacity='0.04'/%3E%3C/svg%3E");
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-poppins), 'Poppins', system-ui, sans-serif;
+  color: var(--forest-dark);
+}
+
+/* ── MapLibre overrides ──────────────────────────────────────────────── */
+.maplibregl-map {
+  font-family: var(--font-open-sans), 'Open Sans', system-ui, sans-serif;
+}
+
+.maplibregl-popup-content {
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 32px rgba(21, 128, 61, 0.15);
+  padding: 0;
+  overflow: hidden;
+  min-width: 240px;
+  border: 1px solid var(--sand);
+  background: var(--cream);
+}
+
+.maplibregl-popup-tip {
+  border-top-color: var(--cream) !important;
+}
+
+.maplibregl-popup-close-button {
+  font-size: 16px;
+  padding: 4px 8px;
+  color: var(--bark);
+  z-index: 1;
+  position: absolute;
+  right: 6px;
+  top: 6px;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+.maplibregl-popup-close-button:hover {
+  background: rgba(0,0,0,0.08);
+}
+
+.maplibregl-ctrl-group {
+  border-radius: var(--radius-sm) !important;
+  box-shadow: var(--shadow-card) !important;
+  border: 1px solid var(--sand) !important;
+}
+
+/* ── Form utilities ──────────────────────────────────────────────────── */
+.label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--bark);
+  margin-bottom: 0.3rem;
+  font-family: var(--font-poppins), 'Poppins', system-ui, sans-serif;
+  letter-spacing: 0.01em;
+}
+
+.input {
+  display: block;
+  width: 100%;
+  padding: 0.55rem 0.875rem;
+  font-size: 0.875rem;
+  border: 1.5px solid var(--sand);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  color: var(--forest-dark);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  font-family: inherit;
+}
+
+.input:focus {
+  border-color: var(--forest);
+  box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.12);
+}
+
+.input::placeholder {
+  color: var(--sand);
+}
+
+select.input { cursor: pointer; }
+textarea.input { resize: vertical; min-height: 80px; }
+
+/* ── Shared component tokens ─────────────────────────────────────────── */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.25rem;
+  background: var(--forest);
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.875rem;
+  border-radius: var(--radius-sm);
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+  font-family: var(--font-poppins), 'Poppins', system-ui, sans-serif;
+}
+
+.btn-primary:hover {
+  background: var(--forest-dark);
+  transform: translateY(-1px);
+}
+
+.btn-gold {
+  background: var(--gold);
+  color: #fff;
+}
+
+.btn-gold:hover {
+  background: #a16207;
+}
+
+.card {
+  background: #fff;
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--sand);
+  box-shadow: var(--shadow-card);
+}
+
+/* ── Accessibility ───────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 3px solid var(--forest);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
