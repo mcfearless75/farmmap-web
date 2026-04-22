@@ -7,6 +7,7 @@ import {
   Leaf, Wheat, Egg, Flower2, ShoppingBasket, Store,
   Droplets, Package, Milk, Search, ListChecks, Navigation,
 } from 'lucide-react'
+import HeroVideo from '@/components/HeroVideo'
 import type { Shop } from '@/lib/types'
 
 export const metadata: Metadata = {
@@ -105,18 +106,7 @@ export default async function HomePage() {
         className="relative px-4 py-20 sm:py-28 text-center overflow-hidden"
         style={{ background: 'var(--forest-dark)' }}
       >
-        {/* Background video */}
-        <video
-          autoPlay
-          muted
-          loop
-          playsInline
-          className="absolute inset-0 w-full h-full object-cover"
-          style={{ opacity: 0.22 }}
-          aria-hidden="true"
-        >
-          <source src="/hero.mp4" type="video/mp4" />
-        </video>
+        <HeroVideo />
 
         {/* Dark gradient overlay */}
         <div
