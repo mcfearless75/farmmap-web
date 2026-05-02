@@ -1,0 +1,78 @@
+import { NextRequest, NextResponse } from 'next/server'
+import Stripe from 'stripe'
+import { createClient } from '@/lib/supabase/server'
+
+/**
+ * GET /api/stripe/connect/callback
+ * Handles the Stripe OAuth return. Exchanges code for account ID and
+ * stores it against the shop.
+ */
+export async function GET(req: NextRequest) {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://farmmap.co.uk'
+
+  const code  = req.nextUrl.searchParams.get('code')
+  const state = req.nextUrl.searchParams.get('state')
+  const error = req.nextUrl.searchParams.get('error')
+
+  if (error) {
+    const desc = req.nextUrl.searchParams.get('error_description') ?? error
+    return NextResponse.redirect(
+      `${siteUrl}/dashboard?connect_error=${encodeURIComponent(desc)}`
+    )
+  }
+
+  if (!code || !state) {
+    return NextResponse.redirect(`${siteUrl}/dashboard?connect_error=invalid_callback`)
+  }
+
+  // State is "userId:shopSlug" — verify the logged-in user matches
+  const [userId, shopSlug] = state.split(':')
+
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user || user.id !== userId) {
+    return NextResponse.redirect(`${siteUrl}/auth/sign-in`)
+  }
+
+  if (!process.env.STRIPE_SECRET_KEY) {
+    return NextResponse.redirect(`${siteUrl}/dashboard?connect_error=not_configured`)
+  }
+
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
+
+  let accountId: string
+  try {
+    const response = await stripe.oauth.token({ grant_type: 'authorization_code', code })
+    if (!response.stripe_user_id) throw new Error('No account ID returned')
+    accountId = response.stripe_user_id
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'stripe_error'
+    return NextResponse.redirect(
+      `${siteUrl}/dashboard/${shopSlug}/upgrade?connect_error=${encodeURIComponent(msg)}`
+    )
+  }
+
+  // Fetch account to check charges/payouts status
+  const account = await stripe.accounts.retrieve(accountId)
+
+  const { error: updateErr } = await supabase
+    .from('shops')
+    .update({
+      stripe_connect_account_id:   accountId,
+      stripe_connect_charges_ok:  account.charges_enabled   ?? false,
+      stripe_connect_payouts_ok:  account.payouts_enabled   ?? false,
+    })
+    .eq('slug', shopSlug)
+    .eq('owner_user_id', user.id)
+
+  if (updateErr) {
+    return NextResponse.redirect(
+      `${siteUrl}/dashboard/${shopSlug}/upgrade?connect_error=db_error`
+    )
+  }
+
+  return NextResponse.redirect(
+    `${siteUrl}/dashboard/${shopSlug}/upgrade?connect_success=1`
+  )
+}
