@@ -135,15 +135,32 @@ create policy "owner manages own zones" on delivery_zones
 create policy "public reads active zones" on delivery_zones
   for select using (active = true);
 
--- ── 5. Extend orders table ───────────────────────────────────────────────
+-- ── 5. Orders table (create if not exists, then extend) ─────────────────
+-- Safe whether or not migration 003 was run first.
+
+create table if not exists orders (
+  id                uuid        primary key default gen_random_uuid(),
+  stripe_session_id text        unique not null,
+  amount_total      integer,
+  customer_email    text,
+  customer_name     text,
+  shop_slug         text,
+  shop_name         text,
+  item_count        integer     default 0,
+  status            text        not null default 'paid',
+  created_at        timestamptz not null default now()
+);
+
+create index if not exists orders_stripe_session_id_idx on orders (stripe_session_id);
+create index if not exists orders_shop_slug_idx          on orders (shop_slug);
+
+alter table orders enable row level security;
+
+-- Add Launch 2 columns (safe to run even if some already exist)
 alter table orders
   add column if not exists shop_id                    uuid references shops(id),
-  add column if not exists order_number               text unique,
-  add column if not exists order_status               text not null default 'pending'
-    check (order_status in (
-      'pending','accepted','preparing','dispatched','delivered',
-      'cancelled','refunded','partially_refunded','disputed'
-    )),
+  add column if not exists order_number               text,
+  add column if not exists order_status               text not null default 'pending',
   add column if not exists delivery_address           jsonb,
   add column if not exists delivery_zone_id           uuid references delivery_zones(id),
   add column if not exists delivery_fee_pence         integer not null default 0,
@@ -159,6 +176,28 @@ alter table orders
   add column if not exists order_items                jsonb,
   add column if not exists shop_note                  text,
   add column if not exists auto_cancel_at             timestamptz;
+
+-- Add unique constraint on order_number if not already present
+do $$ begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'orders_order_number_key'
+  ) then
+    alter table orders add constraint orders_order_number_key unique (order_number);
+  end if;
+end $$;
+
+-- Add check constraint on order_status if not already present
+do $$ begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'orders_order_status_check'
+  ) then
+    alter table orders add constraint orders_order_status_check
+      check (order_status in (
+        'pending','accepted','preparing','dispatched','delivered',
+        'cancelled','refunded','partially_refunded','disputed'
+      ));
+  end if;
+end $$;
 
 -- Order number sequence and trigger
 create sequence if not exists order_number_seq start 10000;
