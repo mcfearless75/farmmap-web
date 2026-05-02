@@ -4,10 +4,11 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
 import ShopMiniMap from '@/components/map/ShopMiniMap'
+import ProductGrid from '@/components/shop/ProductGrid'
 import { formatAddress, getCountryLabel } from '@/lib/utils'
 import {
   MapPin, Phone, Mail, Globe, Clock, CheckCircle,
-  ArrowLeft, Store, Shield
+  ArrowLeft, Shield
 } from 'lucide-react'
 import type { Shop, ConfirmationCount, OpeningHours } from '@/lib/types'
 
@@ -287,6 +288,9 @@ export default async function ShopPage({ params }: Props) {
             </div>
           </div>
         )}
+
+        {/* Products — shown only if shop has Sanity products */}
+        <ProductGrid shopSlug={slug} shopName={typedShop.name} />
 
         {/* Description */}
         {typedShop.description && (

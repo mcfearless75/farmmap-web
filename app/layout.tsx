@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Poppins, Open_Sans } from "next/font/google";
 import "./globals.css";
+import CartButton from "@/components/shop/CartButton";
+import CartDrawer from "@/components/shop/CartDrawer";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://farmmap.co.uk'
 
@@ -103,7 +105,11 @@ export default function RootLayout({
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </head>
-      <body className="min-h-full flex flex-col antialiased">{children}</body>
+      <body className="min-h-full flex flex-col antialiased">
+        {children}
+        <CartButton />
+        <CartDrawer />
+      </body>
     </html>
   );
 }
