@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import { Clock, CheckCircle, XCircle } from 'lucide-react'
+import { Clock, CheckCircle } from 'lucide-react'
+import ShopModerationRow from './ShopModerationRow'
+import ProductModerationRow from './ProductModerationRow'
 
 export default async function QueuePage() {
   const supabase = await createClient()
@@ -10,11 +12,13 @@ export default async function QueuePage() {
     { data: pendingPhotos },
     { data: pendingEdits },
     { data: pendingClaims },
+    { data: pendingProducts },
   ] = await Promise.all([
     supabase.from('shops').select('id, name, slug, town, county, created_at').eq('status', 'pending').order('created_at'),
     supabase.from('photos').select('id, shop_id, storage_path, created_at, shops(name, slug)').eq('status', 'pending').order('created_at').limit(20),
     supabase.from('shop_edits').select('id, shop_id, proposed_data, created_at, shops(name, slug)').eq('status', 'pending').order('created_at').limit(20),
     supabase.from('ownership_claims').select('id, shop_id, evidence, created_at, shops(name, slug)').eq('status', 'pending').order('created_at').limit(20),
+    supabase.from('products').select('id, name, price_pence, category, status, created_at, shops(name, slug)').eq('status', 'pending').order('created_at').limit(50),
   ])
 
   return (
@@ -30,11 +34,28 @@ export default async function QueuePage() {
         {pendingShops?.length ? (
           <div className="bg-white rounded-xl border border-gray-100 divide-y divide-gray-50">
             {pendingShops.map(shop => (
-              <QueueShopRow key={shop.id} shop={shop} />
+              <ShopModerationRow key={shop.id} shop={shop} />
             ))}
           </div>
         ) : (
           <EmptyState label="No pending shops" />
+        )}
+      </section>
+
+      {/* Pending products */}
+      <section>
+        <h2 className="font-semibold text-gray-700 text-sm mb-3 flex items-center gap-2">
+          <Clock className="w-4 h-4 text-amber-500" />
+          Pending products ({pendingProducts?.length ?? 0})
+        </h2>
+        {pendingProducts?.length ? (
+          <div className="bg-white rounded-xl border border-gray-100 divide-y divide-gray-50">
+            {pendingProducts.map(p => (
+              <ProductModerationRow key={p.id} product={p as any} />
+            ))}
+          </div>
+        ) : (
+          <EmptyState label="No pending products" />
         )}
       </section>
 
@@ -98,28 +119,6 @@ export default async function QueuePage() {
   )
 }
 
-function QueueShopRow({ shop }: { shop: any }) {
-  return (
-    <div className="flex items-center justify-between px-5 py-3 hover:bg-gray-50">
-      <div>
-        <span className="text-sm font-medium text-gray-900">{shop.name}</span>
-        <div className="text-xs text-gray-400 mt-0.5">
-          {shop.town}{shop.county ? `, ${shop.county}` : ''} ·{' '}
-          {new Date(shop.created_at).toLocaleDateString('en-GB')}
-        </div>
-      </div>
-      <div className="flex items-center gap-2">
-        <Link
-          href={`/admin/shops/${shop.id}/edit`}
-          className="flex items-center gap-1 text-xs text-green-700 border border-green-200 px-2.5 py-1 rounded-lg hover:bg-green-50"
-        >
-          <CheckCircle className="w-3 h-3" />
-          Review
-        </Link>
-      </div>
-    </div>
-  )
-}
 
 function EmptyState({ label }: { label: string }) {
   return (

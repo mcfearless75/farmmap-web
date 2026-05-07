@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
         placed_at:                  new Date().toISOString(),
         status:                     'paid',
       }, { onConflict: 'stripe_session_id', ignoreDuplicates: true })
-        .select('id, shop_id')
+        .select('id, shop_id, order_number, tracking_token')
         .single()
 
       // Write commission ledger entry if there's a Connect fee
@@ -105,6 +105,56 @@ export async function POST(req: NextRequest) {
               </p>
             </div>`,
         })
+      }
+
+      // Shop owner notification email
+      if (session.metadata?.shop_id && process.env.RESEND_API_KEY) {
+        try {
+          const { data: ownerData } = await supabase
+            .from('shops')
+            .select('owner_user_id')
+            .eq('id', session.metadata.shop_id)
+            .single()
+
+          if (ownerData?.owner_user_id) {
+            const { data: { user: ownerUser } } = await supabase.auth.admin.getUserById(ownerData.owner_user_id)
+
+            if (ownerUser?.email) {
+              const orderNum  = (order as { order_number?: string } | null)?.order_number ?? session.id.slice(-8).toUpperCase()
+              const shopName  = session.metadata?.shop_name ?? 'your shop'
+              const total     = ((session.amount_total ?? 0) / 100).toFixed(2)
+              const itemCount = Number(session.metadata?.item_count ?? 0)
+              const trackUrl  = (order as { tracking_token?: string } | null)?.tracking_token
+                ? `${process.env.NEXT_PUBLIC_SITE_URL}/order/${(order as { tracking_token?: string }).tracking_token}`
+                : null
+
+              await resend.emails.send({
+                from:    'Farmmap Orders <orders@farmmap.co.uk>',
+                to:      ownerUser.email,
+                subject: `New order ${orderNum} — £${total}`,
+                html: `
+                  <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px">
+                    <h2 style="color:#14532d">New order received</h2>
+                    <p style="color:#374151;line-height:1.6">
+                      <strong>${shopName}</strong> has received a new order for
+                      <strong>£${total}</strong> (${itemCount} item${itemCount !== 1 ? 's' : ''}).
+                    </p>
+                    <p style="color:#374151;line-height:1.6">
+                      Order reference: <strong>${orderNum}</strong>
+                    </p>
+                    ${trackUrl ? `<p><a href="${trackUrl}" style="color:#15803d">View order tracking page →</a></p>` : ''}
+                    <p style="color:#374151;line-height:1.6">
+                      Log in to your dashboard to accept or manage this order.
+                    </p>
+                    <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0"/>
+                    <p style="color:#9ca3af;font-size:13px">Farmmap — <a href="https://farmmap.co.uk" style="color:#15803d">farmmap.co.uk</a></p>
+                  </div>`,
+              })
+            }
+          }
+        } catch {
+          // Owner notification failure must not break the webhook response
+        }
       }
       break
     }
