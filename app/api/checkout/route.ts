@@ -67,6 +67,7 @@ export async function POST(req: NextRequest) {
         },
         quantity: item.quantity,
       })),
+      shipping_address_collection: { allowed_countries: ['GB'] },
       success_url: `${siteUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url:  `${siteUrl}/checkout/cancel`,
       metadata: {

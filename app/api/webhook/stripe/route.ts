@@ -52,8 +52,10 @@ export async function POST(req: NextRequest) {
         amount_total:               session.amount_total,
         subtotal_pence:             subtotalPence,
         application_fee_pence:      appFeePence,
-        customer_email:             session.customer_details?.email ?? null,
-        customer_name:              session.customer_details?.name  ?? null,
+        customer_email:             session.customer_details?.email   ?? null,
+        customer_name:              session.customer_details?.name    ?? null,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        delivery_address:           (session as any).shipping_details?.address ?? null,
         shop_slug:                  session.metadata?.shop_slug     ?? null,
         shop_name:                  session.metadata?.shop_name     ?? null,
         item_count:                 Number(session.metadata?.item_count ?? 0),
