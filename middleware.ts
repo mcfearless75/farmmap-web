@@ -33,6 +33,19 @@ export async function middleware(request: NextRequest) {
       url.pathname = '/admin/login'
       return NextResponse.redirect(url)
     }
+
+    // Check role — only admin or moderator may access /admin
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (!profile || (profile.role !== 'admin' && profile.role !== 'moderator')) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/'
+      return NextResponse.redirect(url)
+    }
   }
 
   return supabaseResponse

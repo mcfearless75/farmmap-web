@@ -100,7 +100,8 @@ export async function POST(req: NextRequest) {
     if (error.code === '23505') {
       return NextResponse.json({ error: 'A product with that slug already exists in this shop' }, { status: 409 })
     }
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    console.error('[products/create]', error)
+    return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 })
   }
 
   return NextResponse.json({ data: product }, { status: 201 })

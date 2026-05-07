@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ url: session.url })
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Stripe error'
-    return NextResponse.json({ error: message }, { status: 500 })
+    console.error('[subscriptions/create]', err)
+    return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 })
   }
 }

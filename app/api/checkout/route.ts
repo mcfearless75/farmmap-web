@@ -33,6 +33,29 @@ export async function POST(req: NextRequest) {
   const supabaseAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   if (supabaseUrl && supabaseAnon) {
     const supabase = createClient(supabaseUrl, supabaseAnon)
+
+    // Verify prices server-side
+    const ids = items.map(i => i.id)
+    const { data: dbProducts } = await supabase
+      .from('products')
+      .select('id, price')
+      .in('id', ids)
+
+    if (!dbProducts || dbProducts.length !== ids.length) {
+      return NextResponse.json({ error: 'One or more products not found' }, { status: 400 })
+    }
+
+    const priceMap = new Map(dbProducts.map(p => [p.id, p.price]))
+    for (const item of items) {
+      const dbPrice = priceMap.get(item.id)
+      if (dbPrice === undefined) {
+        return NextResponse.json({ error: 'Product not found' }, { status: 400 })
+      }
+      if (Math.abs(Math.round(dbPrice * 100) - Math.round(item.price * 100)) > 1) {
+        return NextResponse.json({ error: 'Price mismatch — please refresh your basket' }, { status: 400 })
+      }
+    }
+
     const { data: shop } = await supabase
       .from('shops')
       .select('id, tier, stripe_connect_account_id, stripe_connect_charges_ok')
@@ -69,7 +92,7 @@ export async function POST(req: NextRequest) {
       })),
       shipping_address_collection: { allowed_countries: ['GB'] },
       success_url: `${siteUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url:  `${siteUrl}/checkout/cancel`,
+      cancel_url:  `${siteUrl}/checkout/cancel?shop=${encodeURIComponent(items[0].shopSlug)}`,
       metadata: {
         shop_id:            shopId ?? '',
         shop_slug:          items[0].shopSlug,
@@ -94,7 +117,7 @@ export async function POST(req: NextRequest) {
     const session = await stripe.checkout.sessions.create(sessionParams)
     return NextResponse.json({ url: session.url })
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Stripe error'
-    return NextResponse.json({ error: message }, { status: 500 })
+    console.error('[checkout]', err)
+    return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 })
   }
 }

@@ -37,17 +37,28 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Shop not found or not owned by you' }, { status: 403 })
   }
 
+  const nonce = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '')
+  const state = `${nonce}:${user.id}:${shopSlug}`
+
   const params = new URLSearchParams({
     response_type:               'code',
     client_id:                   clientId,
     scope:                       'read_write',
     redirect_uri:                `${siteUrl}/api/stripe/connect/callback`,
-    state:                       `${user.id}:${shopSlug}`,
+    state,
     'stripe_user[business_type]': 'individual',
     'stripe_user[country]':      'GB',
   })
 
-  return NextResponse.redirect(
+  const response = NextResponse.redirect(
     `https://connect.stripe.com/oauth/authorize?${params.toString()}`
   )
+  response.cookies.set('stripe_connect_state', nonce, {
+    httpOnly: true,
+    secure:   true,
+    sameSite: 'lax',
+    maxAge:   600,
+    path:     '/',
+  })
+  return response
 }

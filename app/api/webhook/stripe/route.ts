@@ -61,9 +61,13 @@ export async function POST(req: NextRequest) {
         item_count:                 Number(session.metadata?.item_count ?? 0),
         order_status:               'accepted',
         stripe_connect_account_id:  session.metadata?.connect_account_id ?? null,
-        order_items:                session.metadata?.items_json
-          ? JSON.parse(session.metadata.items_json)
-          : null,
+        order_items:                (() => {
+          try {
+            return session.metadata?.items_json ? JSON.parse(session.metadata.items_json) : null
+          } catch {
+            return null
+          }
+        })(),
         placed_at:                  new Date().toISOString(),
         status:                     'paid',
       }, { onConflict: 'stripe_session_id', ignoreDuplicates: true })

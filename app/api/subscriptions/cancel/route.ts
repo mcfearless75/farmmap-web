@@ -81,8 +81,8 @@ export async function POST(req: NextRequest) {
       cancel_at_period_end: true,
     })
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Stripe error'
-    return NextResponse.json({ error: message }, { status: 502 })
+    console.error('[subscriptions/cancel]', err)
+    return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 502 })
   }
 
   // Update subscriptions table
@@ -92,7 +92,8 @@ export async function POST(req: NextRequest) {
     .eq('id', subscription.id)
 
   if (dbError) {
-    return NextResponse.json({ error: dbError.message }, { status: 500 })
+    console.error('[subscriptions/cancel] db error', dbError)
+    return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 })
   }
 
   return NextResponse.json({

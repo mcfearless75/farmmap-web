@@ -9,6 +9,16 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   if (!user) redirect('/admin/login')
 
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile || (profile.role !== 'admin' && profile.role !== 'moderator')) {
+    redirect('/')
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <AdminNav userEmail={user.email ?? ''} />

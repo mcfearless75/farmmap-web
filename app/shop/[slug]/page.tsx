@@ -195,8 +195,8 @@ export default async function ShopPage({ params }: Props) {
       {/* Nav */}
       <header className="bg-white border-b border-gray-200 px-4 py-3">
         <div className="max-w-3xl mx-auto flex items-center gap-3">
-          <Link href="/" className="text-gray-500 hover:text-gray-700 transition-colors">
-            <ArrowLeft className="w-5 h-5" />
+          <Link href="/" aria-label="Back to Farmmap" className="text-gray-500 hover:text-gray-700 transition-colors">
+            <ArrowLeft className="w-5 h-5" aria-hidden="true" />
           </Link>
           <Link href="/" className="font-semibold text-green-700 text-sm">Farmmap</Link>
           <span className="text-gray-300">/</span>
@@ -211,7 +211,7 @@ export default async function ShopPage({ params }: Props) {
             <div className="flex-1 min-w-0">
               <h1 className="text-2xl font-bold text-gray-900 leading-tight">{typedShop.name}</h1>
               <div className="flex items-center gap-1.5 mt-1 text-gray-500 text-sm">
-                <MapPin className="w-4 h-4 shrink-0" />
+                <MapPin className="w-4 h-4 shrink-0" aria-hidden="true" />
                 <span>{formatAddress(typedShop)}</span>
               </div>
               <div className="text-xs text-gray-400 mt-0.5">
@@ -220,7 +220,7 @@ export default async function ShopPage({ params }: Props) {
             </div>
             {typedShop.verified && (
               <div className="flex items-center gap-1.5 bg-amber-50 text-amber-700 text-xs px-2.5 py-1.5 rounded-full border border-amber-200 shrink-0">
-                <Shield className="w-3.5 h-3.5" />
+                <Shield className="w-3.5 h-3.5" aria-hidden="true" />
                 Verified owner
               </div>
             )}
@@ -258,7 +258,7 @@ export default async function ShopPage({ params }: Props) {
               className="flex items-center gap-1.5 px-3 py-2 text-xs bg-white hover:bg-gray-50 transition-colors cursor-pointer"
               style={{ borderTop: '1px solid #f3f4f6', color: '#15803D' }}
             >
-              <MapPin className="w-3.5 h-3.5 shrink-0" />
+              <MapPin className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
               Open in OpenStreetMap
             </a>
           </div>
@@ -320,13 +320,13 @@ export default async function ShopPage({ params }: Props) {
             <h2 className="text-sm font-semibold text-gray-900">Contact</h2>
             {typedShop.phone && (
               <a href={`tel:${typedShop.phone}`} className="flex items-center gap-2 text-sm text-gray-600 hover:text-green-700">
-                <Phone className="w-4 h-4 shrink-0" />
+                <Phone className="w-4 h-4 shrink-0" aria-hidden="true" />
                 {typedShop.phone}
               </a>
             )}
             {typedShop.email && (
               <a href={`mailto:${typedShop.email}`} className="flex items-center gap-2 text-sm text-gray-600 hover:text-green-700 break-all">
-                <Mail className="w-4 h-4 shrink-0" />
+                <Mail className="w-4 h-4 shrink-0" aria-hidden="true" />
                 {typedShop.email}
               </a>
             )}
@@ -337,7 +337,7 @@ export default async function ShopPage({ params }: Props) {
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 text-sm text-gray-600 hover:text-green-700 break-all"
               >
-                <Globe className="w-4 h-4 shrink-0" />
+                <Globe className="w-4 h-4 shrink-0" aria-hidden="true" />
                 {typedShop.website.replace(/^https?:\/\//, '')}
               </a>
             )}
@@ -350,7 +350,7 @@ export default async function ShopPage({ params }: Props) {
           {hours && (
             <div className="bg-white rounded-xl p-5 border border-gray-100">
               <h2 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                <Clock className="w-4 h-4" />
+                <Clock className="w-4 h-4" aria-hidden="true" />
                 Opening hours
               </h2>
               <HoursTable hours={hours} />

@@ -12,11 +12,8 @@ const ALLOWED_STATUSES: OrderStatus[] = [
 ]
 
 interface PatchBody {
-  order_status?:  OrderStatus
-  shop_note?:     string
-  accepted_at?:   string
-  dispatched_at?: string
-  delivered_at?:  string
+  order_status?: OrderStatus
+  shop_note?:    string
 }
 
 function timestampsForStatus(status: OrderStatus): Partial<Record<string, string>> {
@@ -92,13 +89,9 @@ export async function PATCH(
   }
 
   if (typeof body.shop_note === 'string') {
-    update.shop_note = body.shop_note
+    const trimmed = body.shop_note.trim().slice(0, 2000)
+    update.shop_note = trimmed
   }
-
-  // Allow explicit timestamp overrides
-  if (body.accepted_at)   update.accepted_at   = body.accepted_at
-  if (body.dispatched_at) update.dispatched_at = body.dispatched_at
-  if (body.delivered_at)  update.delivered_at  = body.delivered_at
 
   if (Object.keys(update).length === 0) {
     return NextResponse.json({ error: 'Nothing to update' }, { status: 400 })

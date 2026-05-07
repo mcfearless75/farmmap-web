@@ -25,8 +25,23 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${siteUrl}/dashboard?connect_error=invalid_callback`)
   }
 
-  // State is "userId:shopSlug" — verify the logged-in user matches
-  const [userId, shopSlug] = state.split(':')
+  // State is "nonce:userId:shopSlug" — verify nonce matches cookie
+  const stateParts = state.split(':')
+  if (stateParts.length < 3) {
+    return NextResponse.json({ error: 'Invalid state' }, { status: 400 })
+  }
+  const [nonce, userId, shopSlug] = stateParts
+
+  const storedNonce = req.cookies.get('stripe_connect_state')?.value
+  if (!storedNonce || storedNonce !== nonce) {
+    return NextResponse.json({ error: 'Invalid state' }, { status: 400 })
+  }
+
+  // Clear the state cookie — single use
+  const clearStateCookie = (res: NextResponse) => {
+    res.cookies.set('stripe_connect_state', '', { maxAge: 0, path: '/' })
+    return res
+  }
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -48,9 +63,9 @@ export async function GET(req: NextRequest) {
     accountId = response.stripe_user_id
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'stripe_error'
-    return NextResponse.redirect(
+    return clearStateCookie(NextResponse.redirect(
       `${siteUrl}/dashboard/${shopSlug}/upgrade?connect_error=${encodeURIComponent(msg)}`
-    )
+    ))
   }
 
   // Fetch account to check charges/payouts status
@@ -67,12 +82,12 @@ export async function GET(req: NextRequest) {
     .eq('owner_user_id', user.id)
 
   if (updateErr) {
-    return NextResponse.redirect(
+    return clearStateCookie(NextResponse.redirect(
       `${siteUrl}/dashboard/${shopSlug}/upgrade?connect_error=db_error`
-    )
+    ))
   }
 
-  return NextResponse.redirect(
+  return clearStateCookie(NextResponse.redirect(
     `${siteUrl}/dashboard/${shopSlug}/upgrade?connect_success=1`
-  )
+  ))
 }

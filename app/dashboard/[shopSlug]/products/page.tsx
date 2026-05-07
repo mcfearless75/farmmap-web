@@ -102,12 +102,12 @@ export default async function ProductsPage({ params }: Props) {
           </Link>
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="bg-white rounded-xl border border-gray-100 overflow-hidden overflow-x-auto">
+          <table className="w-full text-sm" aria-label="Products">
             <thead>
               <tr className="border-b border-gray-100">
                 {['Product', 'Price', 'Category', 'Status', 'Stock', ''].map(h => (
-                  <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                  <th key={h} scope="col" className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">
                     {h}
                   </th>
                 ))}
@@ -133,7 +133,7 @@ export default async function ProductsPage({ params }: Props) {
                         className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full"
                         style={{ background: `${s.colour}18`, color: s.colour }}
                       >
-                        <s.Icon className="w-3 h-3" />
+                        <s.Icon className="w-3 h-3" aria-hidden="true" />
                         {s.label}
                       </span>
                     </td>

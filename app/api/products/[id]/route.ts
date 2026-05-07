@@ -102,7 +102,8 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
     if (error.code === '23505') {
       return NextResponse.json({ error: 'A product with that slug already exists in this shop' }, { status: 409 })
     }
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    console.error('[products/patch]', error)
+    return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 })
   }
 
   return NextResponse.json({ data: product })
@@ -136,7 +137,8 @@ export async function DELETE(req: NextRequest, { params }: RouteContext) {
   const { error } = await admin.from('products').delete().eq('id', id)
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    console.error('[products/delete]', error)
+    return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 })
   }
 
   return NextResponse.json({ data: { deleted: true } })

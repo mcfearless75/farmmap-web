@@ -145,6 +145,7 @@ export default async function OrdersPage({ params, searchParams }: Props) {
                   ? { background: '#15803d18', color: '#15803d' }
                   : { color: '#6b7280' }
               }
+              {...(isActive ? { 'aria-current': 'page' as const } : {})}
             >
               {f.label}
             </Link>
@@ -161,13 +162,14 @@ export default async function OrdersPage({ params, searchParams }: Props) {
           </p>
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="bg-white rounded-xl border border-gray-100 overflow-hidden overflow-x-auto">
+          <table className="w-full text-sm" aria-label="Orders">
             <thead>
               <tr className="border-b border-gray-100">
                 {['Order', 'Customer', 'Items', 'Total', 'Status', 'Placed', ''].map(h => (
                   <th
                     key={h}
+                    scope="col"
                     className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide"
                   >
                     {h}
