@@ -60,7 +60,7 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
   // Verify ownership via shop join
   const { data: existing } = await admin
     .from('products')
-    .select('id, shops!inner(owner_user_id)')
+    .select('id, shop_id, shops!inner(owner_user_id)')
     .eq('id', id)
     .eq('shops.owner_user_id', user.id)
     .single()
@@ -77,6 +77,20 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
   }
 
   const incoming = body as Record<string, unknown>
+
+  if ('price_pence' in incoming && (typeof incoming.price_pence !== 'number' || !Number.isFinite(incoming.price_pence) || incoming.price_pence < 0)) {
+    return NextResponse.json({ error: 'Invalid price_pence' }, { status: 400 })
+  }
+  if ('stock_quantity' in incoming && (typeof incoming.stock_quantity !== 'number' || !Number.isInteger(incoming.stock_quantity) || incoming.stock_quantity < 0)) {
+    return NextResponse.json({ error: 'Invalid stock_quantity' }, { status: 400 })
+  }
+  if ('vat_rate' in incoming && (typeof incoming.vat_rate !== 'number' || !Number.isFinite(incoming.vat_rate) || incoming.vat_rate < 0 || incoming.vat_rate > 1)) {
+    return NextResponse.json({ error: 'Invalid vat_rate' }, { status: 400 })
+  }
+  if ('active' in incoming && typeof incoming.active !== 'boolean') {
+    return NextResponse.json({ error: 'Invalid active' }, { status: 400 })
+  }
+
   const updates: Record<string, unknown> = {}
 
   for (const [key, value] of Object.entries(incoming)) {
@@ -95,6 +109,7 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
     .from('products')
     .update(updates)
     .eq('id', id)
+    .eq('shop_id', existing.shop_id)
     .select()
     .single()
 
@@ -118,7 +133,7 @@ export async function DELETE(req: NextRequest, { params }: RouteContext) {
 
   const { data: product } = await admin
     .from('products')
-    .select('id, status, shops!inner(owner_user_id)')
+    .select('id, shop_id, status, shops!inner(owner_user_id)')
     .eq('id', id)
     .eq('shops.owner_user_id', user.id)
     .single()
@@ -134,7 +149,7 @@ export async function DELETE(req: NextRequest, { params }: RouteContext) {
     )
   }
 
-  const { error } = await admin.from('products').delete().eq('id', id)
+  const { error } = await admin.from('products').delete().eq('id', id).eq('shop_id', product.shop_id)
 
   if (error) {
     console.error('[products/delete]', error)

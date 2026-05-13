@@ -20,7 +20,9 @@ export async function POST(
     return NextResponse.json({ error: 'Unauthorised' }, { status: 401 })
   }
 
-  const { data: profile, error: profileError } = await authClient
+  const adminClient = await createAdminClient()
+
+  const { data: profile, error: profileError } = await adminClient
     .from('profiles')
     .select('role')
     .eq('id', user.id)
@@ -46,8 +48,6 @@ export async function POST(
   if (action === 'reject' && !note?.trim()) {
     return NextResponse.json({ error: 'A moderation note is required when rejecting' }, { status: 400 })
   }
-
-  const adminClient = await createAdminClient()
 
   const updates =
     action === 'approve'

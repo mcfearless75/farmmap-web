@@ -5,6 +5,15 @@ import { Resend } from 'resend'
 import { calculateApplicationFee } from '@/lib/tiers'
 import type { Tier } from '@/lib/tiers'
 
+function escHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
 export async function POST(req: NextRequest) {
   const stripeKey     = process.env.STRIPE_SECRET_KEY
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
@@ -74,33 +83,45 @@ export async function POST(req: NextRequest) {
         .select('id, shop_id, order_number, tracking_token')
         .single()
 
-      // Write commission ledger entry if there's a Connect fee
-      if (order && appFeePence > 0 && session.metadata?.shop_id) {
-        await supabase.from('commission_ledger').insert({
-          order_id:                order.id,
-          shop_id:                 session.metadata.shop_id,
-          stripe_session_id:       session.id,
-          order_subtotal_pence:    subtotalPence,
-          commission_pence:        appFeePence,
-          tier_at_time:            shopTier,
-        })
+      // Write commission ledger entry if there's a Connect fee (idempotent)
+      if (appFeePence > 0 && session.metadata?.shop_id) {
+        let orderId = (order as { id?: string } | null)?.id
+        if (!orderId) {
+          const { data: existing } = await supabase
+            .from('orders')
+            .select('id')
+            .eq('stripe_session_id', session.id)
+            .single()
+          orderId = existing?.id
+        }
+        if (orderId) {
+          await supabase.from('commission_ledger').upsert({
+            order_id:             orderId,
+            shop_id:              session.metadata.shop_id,
+            stripe_session_id:    session.id,
+            order_subtotal_pence: subtotalPence,
+            commission_pence:     appFeePence,
+            tier_at_time:         shopTier,
+          }, { onConflict: 'stripe_session_id', ignoreDuplicates: true })
+        }
       }
 
       // Order confirmation email to customer
       const customerEmail = session.customer_details?.email
       if (customerEmail && process.env.RESEND_API_KEY) {
-        const total    = ((session.amount_total ?? 0) / 100).toFixed(2)
-        const shopName = session.metadata?.shop_name ?? 'the farm shop'
+        const total        = ((session.amount_total ?? 0) / 100).toFixed(2)
+        const shopNameRaw  = session.metadata?.shop_name ?? 'the farm shop'
+        const shopNameSafe = escHtml(shopNameRaw)
         await resend.emails.send({
           from:    'Farmmap Orders <orders@farmmap.co.uk>',
           to:      customerEmail,
-          subject: `Order confirmed — ${shopName}`,
+          subject: `Order confirmed — ${shopNameRaw}`,
           html: `
             <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px">
               <h2 style="color:#14532d">Order confirmed!</h2>
               <p style="color:#374151;line-height:1.6">
                 Your payment of <strong>£${total}</strong> to
-                <strong>${shopName}</strong> was successful.
+                <strong>${shopNameSafe}</strong> was successful.
               </p>
               <p style="color:#374151;line-height:1.6">
                 The farm shop will be in touch to arrange delivery or collection.
@@ -126,27 +147,29 @@ export async function POST(req: NextRequest) {
             const { data: { user: ownerUser } } = await supabase.auth.admin.getUserById(ownerData.owner_user_id)
 
             if (ownerUser?.email) {
-              const orderNum  = (order as { order_number?: string } | null)?.order_number ?? session.id.slice(-8).toUpperCase()
-              const shopName  = session.metadata?.shop_name ?? 'your shop'
-              const total     = ((session.amount_total ?? 0) / 100).toFixed(2)
-              const itemCount = Number(session.metadata?.item_count ?? 0)
-              const trackUrl  = (order as { tracking_token?: string } | null)?.tracking_token
+              const orderNumRaw  = (order as { order_number?: string } | null)?.order_number ?? session.id.slice(-8).toUpperCase()
+              const orderNumSafe = escHtml(orderNumRaw)
+              const shopNameRaw  = session.metadata?.shop_name ?? 'your shop'
+              const shopNameSafe = escHtml(shopNameRaw)
+              const total        = ((session.amount_total ?? 0) / 100).toFixed(2)
+              const itemCount    = Number(session.metadata?.item_count ?? 0)
+              const trackUrl     = (order as { tracking_token?: string } | null)?.tracking_token
                 ? `${process.env.NEXT_PUBLIC_SITE_URL}/order/${(order as { tracking_token?: string }).tracking_token}`
                 : null
 
               await resend.emails.send({
                 from:    'Farmmap Orders <orders@farmmap.co.uk>',
                 to:      ownerUser.email,
-                subject: `New order ${orderNum} — £${total}`,
+                subject: `New order ${orderNumRaw} — £${total}`,
                 html: `
                   <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px">
                     <h2 style="color:#14532d">New order received</h2>
                     <p style="color:#374151;line-height:1.6">
-                      <strong>${shopName}</strong> has received a new order for
+                      <strong>${shopNameSafe}</strong> has received a new order for
                       <strong>£${total}</strong> (${itemCount} item${itemCount !== 1 ? 's' : ''}).
                     </p>
                     <p style="color:#374151;line-height:1.6">
-                      Order reference: <strong>${orderNum}</strong>
+                      Order reference: <strong>${orderNumSafe}</strong>
                     </p>
                     ${trackUrl ? `<p><a href="${trackUrl}" style="color:#15803d">View order tracking page →</a></p>` : ''}
                     <p style="color:#374151;line-height:1.6">
@@ -297,7 +320,8 @@ export async function POST(req: NextRequest) {
     // ── Refund processed ──────────────────────────────────────────────────
     case 'charge.refunded': {
       const charge = event.data.object as Stripe.Charge
-      const sessionId = charge.metadata?.stripe_session_id ?? charge.payment_intent as string
+      const sessionId = charge.metadata?.stripe_session_id ?? null
+      if (!sessionId) break
 
       if (sessionId) {
         const refundedTotal = charge.amount_refunded

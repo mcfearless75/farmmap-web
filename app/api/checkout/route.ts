@@ -4,70 +4,98 @@ import { createClient } from '@supabase/supabase-js'
 import { calculateApplicationFee } from '@/lib/tiers'
 import type { CartItem } from '@/lib/cart'
 
+function isValidCartItem(x: unknown): x is CartItem {
+  if (!x || typeof x !== 'object') return false
+  const o = x as Record<string, unknown>
+  return (
+    typeof o.id === 'string'       && o.id.length > 0 &&
+    typeof o.name === 'string'     && o.name.length > 0 &&
+    typeof o.price === 'number'    && isFinite(o.price) && o.price > 0 &&
+    typeof o.quantity === 'number' && Number.isInteger(o.quantity) && o.quantity >= 1 &&
+    typeof o.unit === 'string'     && o.unit.length > 0 &&
+    typeof o.shopSlug === 'string' && o.shopSlug.length > 0 &&
+    typeof o.shopName === 'string' && o.shopName.length > 0 &&
+    (o.image === undefined || typeof o.image === 'string')
+  )
+}
+
 export async function POST(req: NextRequest) {
   if (!process.env.STRIPE_SECRET_KEY) {
     return NextResponse.json({ error: 'Payment not configured' }, { status: 503 })
   }
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 
+  // FIX 1 — Runtime validation of CartItem array
   let items: CartItem[]
   try {
-    const body = await req.json() as { items?: CartItem[] }
-    items = body.items ?? []
+    const body: unknown = await req.json()
+    if (
+      !body ||
+      typeof body !== 'object' ||
+      !Array.isArray((body as Record<string, unknown>).items) ||
+      (body as Record<string, unknown[]>).items.length === 0 ||
+      !(body as Record<string, unknown[]>).items.every(isValidCartItem)
+    ) {
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+    }
+    items = (body as { items: CartItem[] }).items
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
   }
 
-  if (!items.length) {
-    return NextResponse.json({ error: 'Basket is empty' }, { status: 400 })
-  }
-
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://farmmap.co.uk'
 
-  // Look up the shop to get Connect account + tier for commission calculation
+  // FIX 2 — Require Supabase config; no silent price bypass
+  const supabaseUrl  = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  if (!supabaseUrl || !supabaseAnon) {
+    return NextResponse.json({ error: 'Service unavailable' }, { status: 503 })
+  }
+  const supabase = createClient(supabaseUrl, supabaseAnon)
+
+  // FIX 3 — Look up shop first so we can constrain the products query
   let connectAccountId: string | null = null
   let shopTier = 'free'
   let shopId: string | null = null
 
-  const supabaseUrl  = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  if (supabaseUrl && supabaseAnon) {
-    const supabase = createClient(supabaseUrl, supabaseAnon)
+  const { data: shop } = await supabase
+    .from('shops')
+    .select('id, tier, stripe_connect_account_id, stripe_connect_charges_ok')
+    .eq('slug', items[0].shopSlug)
+    .single()
 
-    // Verify prices server-side
-    const ids = items.map(i => i.id)
-    const { data: dbProducts } = await supabase
-      .from('products')
-      .select('id, price')
-      .in('id', ids)
+  if (!shop) {
+    return NextResponse.json({ error: 'Shop not found' }, { status: 400 })
+  }
 
-    if (!dbProducts || dbProducts.length !== ids.length) {
-      return NextResponse.json({ error: 'One or more products not found' }, { status: 400 })
+  shopTier         = shop.tier ?? 'free'
+  shopId           = shop.id
+  connectAccountId = (shop.stripe_connect_charges_ok && shop.stripe_connect_account_id)
+    ? shop.stripe_connect_account_id
+    : null
+
+  // FIX 3 — Verify products are active, approved, and belong to this shop
+  const ids = items.map(i => i.id)
+  const { data: dbProducts } = await supabase
+    .from('products')
+    .select('id, price')
+    .in('id', ids)
+    .eq('shop_id', shopId)
+    .eq('active', true)
+    .eq('status', 'approved')
+
+  if (!dbProducts || dbProducts.length !== ids.length) {
+    return NextResponse.json({ error: 'One or more products not found' }, { status: 400 })
+  }
+
+  const priceMap = new Map<string, number>(dbProducts.map(p => [p.id, p.price]))
+  for (const item of items) {
+    const dbPrice = priceMap.get(item.id)
+    if (dbPrice === undefined) {
+      return NextResponse.json({ error: 'Product not found' }, { status: 400 })
     }
-
-    const priceMap = new Map(dbProducts.map(p => [p.id, p.price]))
-    for (const item of items) {
-      const dbPrice = priceMap.get(item.id)
-      if (dbPrice === undefined) {
-        return NextResponse.json({ error: 'Product not found' }, { status: 400 })
-      }
-      if (Math.abs(Math.round(dbPrice * 100) - Math.round(item.price * 100)) > 1) {
-        return NextResponse.json({ error: 'Price mismatch — please refresh your basket' }, { status: 400 })
-      }
-    }
-
-    const { data: shop } = await supabase
-      .from('shops')
-      .select('id, tier, stripe_connect_account_id, stripe_connect_charges_ok')
-      .eq('slug', items[0].shopSlug)
-      .single()
-
-    if (shop) {
-      shopTier         = shop.tier ?? 'free'
-      shopId           = shop.id
-      connectAccountId = (shop.stripe_connect_charges_ok && shop.stripe_connect_account_id)
-        ? shop.stripe_connect_account_id
-        : null
+    if (Math.abs(Math.round(dbPrice * 100) - Math.round(item.price * 100)) > 1) {
+      return NextResponse.json({ error: 'Price mismatch — please refresh your basket' }, { status: 400 })
     }
   }
 
@@ -86,7 +114,8 @@ export async function POST(req: NextRequest) {
             description: `${item.unit} — ${item.shopName}`,
             ...(item.image ? { images: [item.image] } : {}),
           },
-          unit_amount: Math.round(item.price * 100),
+          // FIX 4 — Use verified DB price, not client-supplied price
+          unit_amount: Math.round((priceMap.get(item.id) ?? item.price) * 100),
         },
         quantity: item.quantity,
       })),

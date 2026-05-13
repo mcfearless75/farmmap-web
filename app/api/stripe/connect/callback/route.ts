@@ -30,7 +30,8 @@ export async function GET(req: NextRequest) {
   if (stateParts.length < 3) {
     return NextResponse.json({ error: 'Invalid state' }, { status: 400 })
   }
-  const [nonce, userId, shopSlug] = stateParts
+  const [nonce, userId, ...slugParts] = stateParts
+  const shopSlug = slugParts.join(':')
 
   const storedNonce = req.cookies.get('stripe_connect_state')?.value
   if (!storedNonce || storedNonce !== nonce) {

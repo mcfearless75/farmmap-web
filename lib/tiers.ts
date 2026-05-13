@@ -87,6 +87,7 @@ export function calculateApplicationFee(
   subtotalPence: number,
   tier: Tier
 ): number {
+  if (!Number.isFinite(subtotalPence) || subtotalPence < 0) return 0
   if (tier === 'free' || tier === 'bronze') return 0
   const cfg = TIER_CONFIG[tier]
   if (subtotalPence <= cfg.commissionThresholdPence) return 0

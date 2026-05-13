@@ -7,8 +7,7 @@ type OrderStatus =
   | 'cancelled' | 'refunded' | 'partially_refunded' | 'disputed'
 
 const ALLOWED_STATUSES: OrderStatus[] = [
-  'pending', 'accepted', 'preparing', 'dispatched', 'delivered',
-  'cancelled', 'refunded', 'partially_refunded', 'disputed',
+  'accepted', 'preparing', 'dispatched', 'delivered', 'cancelled',
 ]
 
 interface PatchBody {
@@ -101,7 +100,8 @@ export async function PATCH(
     .from('orders')
     .update(update)
     .eq('id', orderId)
-    .select()
+    .eq('shop_id', shop.id)
+    .select('id, order_number, order_status, shop_note, tracking_token, updated_at')
     .single()
 
   if (error) {

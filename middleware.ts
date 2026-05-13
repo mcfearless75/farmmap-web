@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
@@ -34,14 +35,18 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(url)
     }
 
-    // Check role — only admin or moderator may access /admin
-    const { data: profile } = await supabase
+    // Check role via service-role client to bypass RLS
+    const adminSupabase = createSupabaseClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+    const { data: profile } = await adminSupabase
       .from('profiles')
       .select('role')
       .eq('id', user.id)
       .single()
 
-    if (!profile || (profile.role !== 'admin' && profile.role !== 'moderator')) {
+    if (!profile || !['admin', 'moderator'].includes(profile.role)) {
       const url = request.nextUrl.clone()
       url.pathname = '/'
       return NextResponse.redirect(url)

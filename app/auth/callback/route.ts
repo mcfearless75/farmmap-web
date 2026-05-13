@@ -2,10 +2,19 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
 export async function GET(req: NextRequest) {
-  const { searchParams, origin } = new URL(req.url)
+  const { searchParams } = new URL(req.url)
+  const origin = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://farmmap.co.uk'
   const code = searchParams.get('code')
   const rawNext = searchParams.get('next') ?? ''
-  const next = rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : '/dashboard'
+  let next = '/dashboard'
+  if (rawNext) {
+    try {
+      const parsed = new URL(rawNext, origin)
+      if (parsed.origin === origin) next = parsed.pathname + parsed.search
+    } catch {
+      // invalid URL — keep default
+    }
+  }
 
   if (!code) {
     return NextResponse.redirect(`${origin}/auth/sign-in?error=missing_code`)
